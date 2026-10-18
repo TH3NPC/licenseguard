@@ -1,15 +1,24 @@
 // Switches the Prisma datasource from SQLite (local dev default) to PostgreSQL
-// for production builds. Run by the Vercel build command; a no-op if already
-// PostgreSQL. The committed schema stays SQLite so local dev/tests are
-// unaffected — this only mutates the ephemeral build checkout on Vercel.
+// for production builds, and adds a directUrl (used by `prisma db push` /
+// migrations through the Supabase session pooler). Run by the Vercel build
+// command; a no-op if already PostgreSQL. The committed schema stays SQLite so
+// local dev/tests are unaffected — this only mutates the ephemeral build
+// checkout on Vercel.
 import { readFileSync, writeFileSync } from "node:fs";
 
 const path = "prisma/schema.prisma";
-const src = readFileSync(path, "utf8");
+let src = readFileSync(path, "utf8");
 
 if (src.includes('provider = "sqlite"')) {
-  writeFileSync(path, src.replace('provider = "sqlite"', 'provider = "postgresql"'));
-  console.log("✔ Prisma datasource provider → postgresql");
+  src = src.replace('provider = "sqlite"', 'provider = "postgresql"');
+  if (!src.includes("directUrl")) {
+    src = src.replace(
+      'url      = env("DATABASE_URL")',
+      'url       = env("DATABASE_URL")\n  directUrl = env("DIRECT_URL")',
+    );
+  }
+  writeFileSync(path, src);
+  console.log("✔ Prisma datasource → postgresql (+ directUrl)");
 } else {
   console.log("Prisma datasource provider is not sqlite; leaving as-is.");
 }

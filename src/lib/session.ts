@@ -1,47 +1,40 @@
 import "server-only";
-import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { prisma } from "./prisma";
-import { signSession, verifySession, type SessionPayload } from "./auth";
+import { createClient } from "./supabase/server";
 
 /**
- * Server-only session management: reads/writes the httpOnly session cookie and
- * resolves it to a real user record. Authorization always starts here — never
- * from anything the client asserts.
+ * Server-side session resolution. Identity comes from Supabase Auth; the app's
+ * own profile row (and everything it owns) is keyed by the Supabase user id and
+ * ensured here on first use, so the signup/confirm timing never matters.
+ * Authorization always starts from this user — never from client input.
  */
 
-export const SESSION_COOKIE = "lg_session";
-const MAX_AGE = 60 * 60 * 24 * 7; // 7 days
-
-export async function startSession(payload: SessionPayload): Promise<void> {
-  const token = await signSession(payload);
-  const store = await cookies();
-  store.set(SESSION_COOKIE, token, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
-    path: "/",
-    maxAge: MAX_AGE,
-  });
-}
-
-export async function endSession(): Promise<void> {
-  const store = await cookies();
-  store.delete(SESSION_COOKIE);
-}
-
-export async function getSession(): Promise<SessionPayload | null> {
-  const store = await cookies();
-  const token = store.get(SESSION_COOKIE)?.value;
-  return verifySession(token);
-}
-
-/** Resolve the current authenticated user, or null. */
 export async function getCurrentUser() {
-  const session = await getSession();
-  if (!session) return null;
-  const user = await prisma.user.findUnique({
-    where: { id: session.userId },
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return null;
+
+  const email = user.email ?? `${user.id}@users.noreply`;
+
+  // Ensure the app profile exists, keyed by the Supabase user id.
+  const dbUser = await prisma.user.upsert({
+    where: { id: user.id },
+    update: {},
+    create: {
+      id: user.id,
+      email,
+      name: (user.user_metadata?.name as string | undefined) ?? null,
+      subscriptions: {
+        create: {
+          plan: "developer",
+          status: "active",
+          currentPeriodEnd: new Date(Date.now() + 30 * 86400000),
+        },
+      },
+    },
     select: {
       id: true,
       email: true,
@@ -52,7 +45,8 @@ export async function getCurrentUser() {
       createdAt: true,
     },
   });
-  return user;
+
+  return dbUser;
 }
 
 /** Require an authenticated user in a server component / route, else redirect. */

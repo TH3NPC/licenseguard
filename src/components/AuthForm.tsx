@@ -28,6 +28,15 @@ export function AuthForm({
         </div>
       ) : null}
 
+      {state.ok && state.message ? (
+        <div
+          role="status"
+          className="rounded-[var(--radius)] border border-[var(--color-ok-line)] bg-[var(--color-ok-bg)] px-3 py-2 text-sm text-[var(--color-ok)]"
+        >
+          {state.message}
+        </div>
+      ) : null}
+
       {isRegister ? (
         <div>
           <label className="label" htmlFor="name">

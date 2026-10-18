@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { describe, it, expect, beforeEach } from "vitest";
 import { prisma } from "@/lib/prisma";
 import {
@@ -26,7 +27,8 @@ async function clean() {
 }
 
 async function makeUser(email: string) {
-  return prisma.user.create({ data: { email, passwordHash: "x" } });
+  // id now mirrors a Supabase Auth user id (a UUID).
+  return prisma.user.create({ data: { id: randomUUID(), email } });
 }
 
 function input(name: string) {
