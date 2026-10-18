@@ -4,7 +4,7 @@
  * application boundary.
  */
 
-export const APP_NAME = "LicenseGuard";
+export const APP_NAME = "ZER";
 
 export const LICENSE_STATUS = {
   UNPAID_PREVIEW: "unpaid_preview",

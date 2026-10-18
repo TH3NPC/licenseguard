@@ -9,13 +9,24 @@ export function IntegrationPanel({ publicId }: { publicId: string }) {
 
   return (
     <div className="card p-5">
-      <h2 className="text-sm font-semibold">Integration</h2>
+      <div className="flex items-start justify-between gap-3">
+        <h2 className="text-sm font-semibold">Integration</h2>
+        <a
+          href={`/preview/${publicId}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="btn btn-primary btn-sm"
+        >
+          Open live preview ↗
+        </a>
+      </div>
       <p className="mt-1 text-sm text-[var(--color-subtle)]">
         Add this to the <code className="mono">&lt;head&gt;</code> of the site
         you are building. The{" "}
         <span className="mono">data-project-id</span> is a{" "}
         <strong>public</strong> identifier — it is safe in the browser and is
-        not a secret.
+        not a secret. Use <strong>Open live preview</strong> to see this
+        project&apos;s watermark on a sample site right now.
       </p>
 
       <div className="mt-4">

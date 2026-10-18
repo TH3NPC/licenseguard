@@ -1,7 +1,8 @@
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { buildPublicResponse } from "@/lib/licensing";
-import { isOriginAllowed } from "@/lib/origin";
+import { isOriginAllowed, hostFromOrigin } from "@/lib/origin";
+import { publicEnv } from "@/lib/env";
 import { parsePreviewConfig, parseWatermarkConfig } from "@/lib/validation";
 import { recordSdkUsage } from "@/lib/usage";
 import { rateLimit } from "@/lib/rate-limit";
@@ -77,9 +78,12 @@ async function handle(req: NextRequest, projectId: string | null) {
     });
   }
 
-  // Origin / allowed-domain check.
+  // Origin / allowed-domain check. The app's own host is always allowed so the
+  // built-in hosted live preview (/preview/[publicId]) works out of the box.
   const origin = req.headers.get("origin") ?? req.headers.get("referer");
   const allowed = project.domains.map((d) => d.domain);
+  const appHost = hostFromOrigin(publicEnv.appUrl);
+  if (appHost) allowed.push(appHost);
   if (!isOriginAllowed(origin, allowed)) {
     // Do not reveal config to unauthorized origins.
     return apiError(

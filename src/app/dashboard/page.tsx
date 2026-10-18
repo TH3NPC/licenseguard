@@ -10,11 +10,25 @@ import { EmptyState } from "@/components/ui/EmptyState";
 export const metadata = { title: "Overview" };
 export const dynamic = "force-dynamic";
 
-function StatTile({ label, value, hint }: { label: string; value: number; hint?: string }) {
+function StatTile({
+  label,
+  value,
+  hint,
+  accent = "brand",
+}: {
+  label: string;
+  value: number;
+  hint?: string;
+  accent?: "brand" | "ok" | "warn" | "danger";
+}) {
+  const color = `var(--${accent})`;
   return (
-    <div className="card p-4">
-      <div className="text-sm text-[var(--color-muted)]">{label}</div>
-      <div className="mt-1 text-2xl font-semibold tabular-nums">{value}</div>
+    <div className="card card-hover p-4">
+      <div className="flex items-center justify-between">
+        <span className="text-sm text-[var(--color-muted)]">{label}</span>
+        <span className="h-2.5 w-2.5 rounded-full" style={{ background: color }} />
+      </div>
+      <div className="mt-2 text-3xl font-bold tabular-nums tracking-tight">{value}</div>
       {hint ? <div className="mt-0.5 text-xs text-[var(--color-subtle)]">{hint}</div> : null}
     </div>
   );
@@ -70,10 +84,10 @@ export default async function OverviewPage() {
       ) : (
         <>
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
-            <StatTile label="Projects" value={projects.length} />
-            <StatTile label="In preview" value={preview} hint="Unpaid / watermarked" />
-            <StatTile label="Active licenses" value={active} />
-            <StatTile label="Expired / blocked" value={endedOrBlocked} />
+            <StatTile label="Projects" value={projects.length} accent="brand" />
+            <StatTile label="In preview" value={preview} hint="Unpaid / watermarked" accent="warn" />
+            <StatTile label="Active licenses" value={active} accent="ok" />
+            <StatTile label="Expired / blocked" value={endedOrBlocked} accent="danger" />
           </div>
 
           <div className="card p-4 mb-6">
