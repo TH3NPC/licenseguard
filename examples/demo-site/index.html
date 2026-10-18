@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Northwind Coffee — Demo client site</title>
+
+    <!--
+      LicenseGuard demo integration.
+      =================================================================
+      1. Start the LicenseGuard dashboard:   npm run dev   (http://localhost:3000)
+      2. Create a project in the dashboard, add "localhost" to Allowed domains.
+      3. Copy its public id and paste it into data-project-id below.
+      4. Serve THIS folder from localhost so the origin is allowed, e.g.:
+             npx serve examples/demo-site            (then open the shown URL)
+         (Opening the file directly with file:// also works because the SDK
+          treats a missing origin as localhost, but serving it is more realistic.)
+      5. While the project is "Unpaid preview" you'll see the watermark and the
+         configured preview interactions. Activate the license in the dashboard
+         and reload — the watermark lifts (allow up to ~60s for the SDK cache).
+      =================================================================
+      data-api points at the dashboard origin that serves the SDK + API.
+    -->
+    <script
+      src="http://localhost:3000/sdk/v1/licenseguard.js"
+      data-project-id="lg_pub_demo00000000f6a534"
+      data-api="http://localhost:3000"
+      defer
+    ></script>
+
+    <style>
+      :root { color-scheme: light; }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+        color: #1c1917;
+        background: #fafaf9;
+        line-height: 1.5;
+      }
+      header {
+        display: flex; align-items: center; justify-content: space-between;
+        padding: 16px 24px; border-bottom: 1px solid #e7e5e4; background: #fff;
+      }
+      nav a { margin-left: 20px; color: #57534e; text-decoration: none; font-size: 14px; }
+      .hero { max-width: 780px; margin: 0 auto; padding: 72px 24px; }
+      .hero h1 { font-size: 40px; line-height: 1.1; letter-spacing: -0.02em; margin: 0 0 16px; }
+      .hero p { font-size: 18px; color: #57534e; max-width: 46ch; }
+      .cta { margin-top: 28px; display: flex; gap: 12px; flex-wrap: wrap; }
+      button, .btn {
+        font: inherit; font-weight: 600; font-size: 15px; cursor: pointer;
+        padding: 12px 20px; border-radius: 8px; border: 1px solid #d6d3d1; background: #fff;
+      }
+      .btn-primary { background: #1c1917; color: #fff; border-color: #1c1917; }
+      .grid { max-width: 780px; margin: 0 auto 80px; padding: 0 24px; display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); }
+      .card { border: 1px solid #e7e5e4; border-radius: 10px; padding: 20px; background: #fff; }
+      footer { border-top: 1px solid #e7e5e4; padding: 24px; text-align: center; color: #78716c; font-size: 14px; }
+      form.signup { max-width: 780px; margin: 0 auto 60px; padding: 0 24px; display: flex; gap: 12px; }
+      input[type="email"] { flex: 1; padding: 12px 14px; border: 1px solid #d6d3d1; border-radius: 8px; font: inherit; }
+    </style>
+  </head>
+  <body>
+    <header>
+      <strong>Northwind Coffee</strong>
+      <nav>
+        <a href="/menu">Menu</a>
+        <a href="/locations">Locations</a>
+        <a href="/order" class="buy">Order online</a>
+      </nav>
+    </header>
+
+    <section class="hero">
+      <h1>Small-batch coffee, roasted this morning.</h1>
+      <p>
+        A demo client website used to show LicenseGuard's unpaid-preview
+        watermark and preview interaction rules in action.
+      </p>
+      <div class="cta">
+        <!-- "links" / "strict" preview modes will redirect these. -->
+        <a href="/order" class="btn btn-primary">Order now</a>
+        <!-- data-lg-allow is never intercepted, even in strict mode. -->
+        <a href="/about" class="btn" data-lg-allow="1">About us</a>
+      </div>
+    </section>
+
+    <div class="grid">
+      <div class="card"><h3>Ethically sourced</h3><p>Direct-trade beans from growers we visit every season.</p></div>
+      <div class="card"><h3>Roasted daily</h3><p>Shipped within 24 hours of roasting.</p></div>
+      <div class="card"><h3>Subscriptions</h3><p>Fresh coffee on your schedule.</p></div>
+    </div>
+
+    <!-- Forms are never intercepted by the SDK. -->
+    <form class="signup" onsubmit="event.preventDefault(); alert('Form submit is never intercepted by LicenseGuard.');">
+      <input type="email" placeholder="you@example.com" aria-label="Email" />
+      <button type="submit" class="btn btn-primary">Subscribe</button>
+    </form>
+
+    <footer>© Northwind Coffee — demo site for LicenseGuard.</footer>
+  </body>
+</html>

@@ -1,0 +1,216 @@
+// LicenseGuard data model.
+//
+// Dev uses SQLite (zero external setup, fully testable locally).
+// For production (Vercel + managed Postgres), change `provider` to
+// "postgresql" and point DATABASE_URL at the Postgres connection string.
+//
+// Portability notes (kept deliberately engine-agnostic):
+//   * Status fields are String (SQLite has no enum type). Allowed values are
+//     enforced in the application layer (see src/lib/constants.ts + zod schemas).
+//   * JSON config blobs are stored as String and (de)serialized in the app.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String  @id @default(cuid())
+  email        String  @unique
+  passwordHash String
+  name         String?
+
+  // Account-level defaults applied when creating a new project.
+  defaultPortfolioUrl   String?
+  defaultWatermarkText  String  @default("UNPAID PREVIEW — CONTACT TO PURCHASE")
+  defaultWatermarkStyle String  @default("diagonal") // diagonal | center | layer | banner
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  projects      Project[]
+  subscriptions Subscription[]
+  auditLogs     AuditLog[]
+
+  @@index([email])
+}
+
+model Project {
+  id       String @id @default(cuid())
+  // Public, browser-safe identifier used by the SDK. NOT a secret.
+  publicId String @unique
+
+  ownerId String
+  owner   User   @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+
+  name        String
+  websiteUrl  String?
+  environment String @default("development") // development | production
+  status      String @default("active") // active | disabled | archived
+
+  // Watermark + preview configuration, JSON-serialized (see WatermarkConfig /
+  // PreviewConfig zod schemas). Stored as String for SQLite/Postgres portability.
+  watermarkConfig String
+  previewConfig   String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  license       License?
+  domains       ProjectDomain[]
+  credentials   ApiCredential[]
+  licenseEvents LicenseEvent[]
+  payments      Payment[]
+  sdkUsage      SdkUsage[]
+
+  @@index([ownerId])
+  @@index([publicId])
+}
+
+model ProjectDomain {
+  id        String   @id @default(cuid())
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  // Normalized host (lowercase, no scheme, no port). "*" allowed for dev.
+  domain    String
+  createdAt DateTime @default(now())
+
+  @@unique([projectId, domain])
+  @@index([projectId])
+}
+
+model License {
+  id        String  @id @default(cuid())
+  projectId String  @unique
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  // unpaid_preview | active | expired | revoked | suspended
+  status      String    @default("unpaid_preview")
+  activatedAt DateTime?
+  expiresAt   DateTime?
+  note        String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([projectId])
+}
+
+model LicenseEvent {
+  id        String  @id @default(cuid())
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  // created | activated | renewed | expired | revoked | suspended | reinstated
+  type       String
+  fromStatus String?
+  toStatus   String?
+  actor      String // user id, "system", or "payment:<ref>"
+  metadata   String? // JSON-serialized
+  createdAt  DateTime @default(now())
+
+  @@index([projectId])
+  @@index([createdAt])
+}
+
+model ApiCredential {
+  id        String  @id @default(cuid())
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  name      String  @default("Server key")
+  // Visible, non-secret prefix shown in the dashboard (e.g. "sk_live_a1b2").
+  prefix    String
+  // SHA-256 hash of the full secret. The plaintext secret is shown ONCE at
+  // creation and never stored.
+  tokenHash String  @unique
+  status    String  @default("active") // active | revoked
+
+  lastUsedAt DateTime?
+  createdAt  DateTime  @default(now())
+  revokedAt  DateTime?
+
+  @@index([projectId])
+  @@index([tokenHash])
+}
+
+model Subscription {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  plan   String @default("developer")
+  status String @default("active") // active | expired | canceled | suspended
+
+  currentPeriodStart DateTime  @default(now())
+  currentPeriodEnd   DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+}
+
+model Payment {
+  id        String   @id @default(cuid())
+  projectId String?
+  project   Project? @relation(fields: [projectId], references: [id], onDelete: SetNull)
+
+  provider String  @default("chapa")
+  // Unique client-generated reference tying a payment to one project/order.
+  txRef    String  @unique
+  amount   Float
+  currency String  @default("ETB")
+  status   String  @default("pending") // pending | success | failed
+
+  rawMeta    String? // JSON-serialized provider payload
+  verifiedAt DateTime?
+  createdAt  DateTime  @default(now())
+
+  @@index([projectId])
+  @@index([txRef])
+}
+
+model WebhookEvent {
+  id        String   @id @default(cuid())
+  provider  String   @default("chapa")
+  // Provider-supplied id (or derived hash) used for idempotent processing.
+  eventKey  String   @unique
+  status    String   @default("received") // received | processed | ignored | failed
+  payload   String? // JSON-serialized, truncated
+  receivedAt  DateTime  @default(now())
+  processedAt DateTime?
+
+  @@index([eventKey])
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  userId     String?
+  user       User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  action     String
+  targetType String?
+  targetId   String?
+  ip         String?
+  metadata   String? // JSON-serialized
+  createdAt  DateTime @default(now())
+
+  @@index([userId])
+  @@index([createdAt])
+}
+
+model SdkUsage {
+  id        String  @id @default(cuid())
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  // UTC day bucket "YYYY-MM-DD" for aggregated license-check counts.
+  day       String
+  count     Int     @default(0)
+
+  @@unique([projectId, day])
+  @@index([projectId])
+}
