@@ -146,11 +146,11 @@
       "font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,sans-serif",
     ].join(";");
 
+    // White text + mix-blend-mode:difference keeps the watermark visible on any
+    // background (dark or light) — it always renders as a contrasting tone.
     var textCss =
-      "color:rgba(20,20,20," +
+      "color:rgba(255,255,255," +
       opacity +
-      ");text-shadow:0 1px 0 rgba(255,255,255," +
-      Math.min(opacity + 0.15, 0.6) +
       ");font-weight:800;letter-spacing:.04em;text-transform:uppercase;white-space:nowrap;";
 
     if (style === "banner") {
@@ -177,7 +177,7 @@
     if (style === "center") {
       var center = document.createElement("div");
       center.style.cssText =
-        "position:absolute;inset:0;display:flex;align-items:center;justify-content:center;";
+        "position:absolute;inset:0;display:flex;align-items:center;justify-content:center;mix-blend-mode:difference;";
       var span = document.createElement("div");
       span.style.cssText =
         textCss + "font-size:" + fontSize * 1.8 + "px;transform:rotate(-18deg);";
@@ -193,7 +193,7 @@
     layer.style.cssText =
       "position:absolute;inset:0;background-image:url(\"" +
       svg +
-      "\");background-repeat:repeat;" +
+      "\");background-repeat:repeat;mix-blend-mode:difference;" +
       (style === "layer" ? "background-color:rgba(245,245,244,.04);" : "");
     root.appendChild(layer);
     return root;
@@ -208,7 +208,7 @@
       '" height="' +
       tile / 2 +
       '">' +
-      '<text x="50%" y="50%" fill="rgba(20,20,20,' +
+      '<text x="50%" y="50%" fill="rgba(255,255,255,' +
       opacity +
       ')" font-family="sans-serif" font-size="' +
       fontSize +
