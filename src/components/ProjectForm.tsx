@@ -35,6 +35,8 @@ export function ProjectForm({
   const [state, formAction] = useActionState(action, emptyState);
   const wm = defaults.watermark ?? {};
   const pv = defaults.preview ?? {};
+  // Creating: show only the essentials; everything else lives under "More options".
+  const simple = mode === "create";
 
   // Live-preview state (these fields are controlled; the rest stay uncontrolled).
   const [style, setStyle] = useState<string>(wm.style ?? "diagonal");
@@ -49,6 +51,72 @@ export function ProjectForm({
     wm.theme === "dark" ? "dark" : "light",
   );
 
+  const domainsField = (
+    <Field
+      label="Allowed domains"
+      hint={
+        simple
+          ? "Leave empty to allow just your website. Add more, one per line. Use * while testing to allow any site."
+          : "One per line, like client.com (full URLs are fine). Use * while testing to allow any site."
+      }
+    >
+      <textarea
+        name="domains"
+        className="field font-mono text-sm"
+        rows={3}
+        placeholder={"client.com\nclient.vercel.app"}
+        defaultValue={(defaults.domains ?? []).join("\n")}
+      />
+    </Field>
+  );
+
+  const clickFields = (
+    <div className="space-y-4">
+      <div className="grid sm:grid-cols-2 gap-4">
+        <Field label="Behavior">
+          <select name="preview.mode" className="field" defaultValue={pv.mode ?? "links"}>
+            <option value="off">Do nothing — watermark only</option>
+            <option value="links">Send link clicks to my page</option>
+            <option value="selected">Only specific buttons</option>
+            <option value="strict">All links &amp; buttons (strict)</option>
+          </select>
+        </Field>
+        <Field label="Send them to" hint="Your portfolio or contact page">
+          <input
+            name="preview.redirectUrl"
+            type="url"
+            className="field"
+            placeholder="https://your-portfolio.com"
+            defaultValue={pv.redirectUrl ?? ""}
+          />
+        </Field>
+      </div>
+      <p className="help -mt-1">Forms and text fields always keep working.</p>
+      <details className="more">
+        <summary>Advanced click rules</summary>
+        <div className="mt-4 space-y-4">
+          <div className="grid sm:grid-cols-2 gap-4">
+            <Field label="Specific buttons (CSS selector)" hint='Used by "Only specific buttons"'>
+              <input name="preview.selector" className="field font-mono" placeholder=".buy, [data-checkout]" defaultValue={pv.selector ?? ""} />
+            </Field>
+            <Field label="Never block (CSS selector)">
+              <input name="preview.allowSelector" className="field font-mono" placeholder="[data-lg-allow]" defaultValue={pv.allowSelector ?? ""} />
+            </Field>
+          </div>
+          <Field label="Message when there's no link" hint="Shown as a small notice">
+            <input
+              name="preview.notice"
+              className="field"
+              maxLength={240}
+              defaultValue={pv.notice ?? ""}
+              placeholder="This is an unpaid preview. Contact to purchase."
+            />
+          </Field>
+        </div>
+      </details>
+    </div>
+  );
+
   return (
     <form action={formAction} className="grid gap-4 lg:grid-cols-[1fr_340px] lg:items-start">
       <div className="space-y-4 min-w-0">
@@ -59,33 +127,36 @@ export function ProjectForm({
           <Field label="Name" error={state.fieldErrors?.name}>
             <input name="name" className="field" required defaultValue={defaults.name} placeholder="Client website" />
           </Field>
-          <div className="grid sm:grid-cols-2 gap-4">
-            <Field label="Website URL" hint="Optional" error={state.fieldErrors?.websiteUrl}>
-              <input name="websiteUrl" type="url" className="field" placeholder="https://client.com" defaultValue={defaults.websiteUrl} />
-            </Field>
+          <Field
+            label="Website"
+            hint={
+              simple
+                ? "The site you'll put the watermark on, like client.com. It's allowed automatically."
+                : "The client's site. Used for the installation check."
+            }
+            error={state.fieldErrors?.websiteUrl}
+          >
+            <input
+              name="websiteUrl"
+              type="text"
+              inputMode="url"
+              autoComplete="off"
+              className="field"
+              placeholder="client.com"
+              defaultValue={defaults.websiteUrl}
+            />
+          </Field>
+          {simple ? null : (
             <Field label="Environment">
               <select name="environment" className="field" defaultValue={defaults.environment ?? "development"}>
                 <option value="development">Development</option>
                 <option value="production">Production</option>
               </select>
             </Field>
-          </div>
+          )}
         </Box>
 
-        <Box title="Where it runs">
-          <Field
-            label="Allowed domains"
-            hint="One per line — just the domain, like client.com. Use * while testing to allow any site."
-          >
-            <textarea
-              name="domains"
-              className="field font-mono text-sm"
-              rows={3}
-              placeholder={"client.com\nclient.vercel.app"}
-              defaultValue={(defaults.domains ?? []).join("\n")}
-            />
-          </Field>
-        </Box>
+        {simple ? null : <Box title="Where it runs">{domainsField}</Box>}
 
         <Box title="Watermark">
           <div>
@@ -116,27 +187,7 @@ export function ProjectForm({
                 </label>
               ))}
             </div>
-            <p className="help">
-              Auto reads the site&apos;s background and picks a dark or light watermark for you.
-            </p>
-          </div>
-
-          <div className="grid sm:grid-cols-2 gap-4">
-            <Field label="Style">
-              <select name="watermark.style" className="field" value={style} onChange={(e) => setStyle(e.target.value)}>
-                <option value="diagonal">Repeated diagonal</option>
-                <option value="center">Large centered</option>
-                <option value="layer">Even layer</option>
-                <option value="banner">Banner bar</option>
-              </select>
-            </Field>
-            <Field label="Size">
-              <select name="watermark.size" className="field" value={size} onChange={(e) => setSize(e.target.value)}>
-                <option value="sm">Small</option>
-                <option value="md">Medium</option>
-                <option value="lg">Large</option>
-              </select>
-            </Field>
+            <p className="help">Auto reads the site&apos;s background and picks a dark or light watermark for you.</p>
           </div>
 
           <Field label="Text" error={state.fieldErrors?.watermark}>
@@ -169,9 +220,24 @@ export function ProjectForm({
           </div>
 
           <details className="more">
-            <summary>More options</summary>
+            <summary>Style &amp; size</summary>
             <div className="mt-4 space-y-4">
               <div className="grid sm:grid-cols-2 gap-4">
+                <Field label="Style">
+                  <select name="watermark.style" className="field" value={style} onChange={(e) => setStyle(e.target.value)}>
+                    <option value="diagonal">Repeated diagonal</option>
+                    <option value="center">Large centered</option>
+                    <option value="layer">Even layer</option>
+                    <option value="banner">Banner bar</option>
+                  </select>
+                </Field>
+                <Field label="Size">
+                  <select name="watermark.size" className="field" value={size} onChange={(e) => setSize(e.target.value)}>
+                    <option value="sm">Small</option>
+                    <option value="md">Medium</option>
+                    <option value="lg">Large</option>
+                  </select>
+                </Field>
                 <Field label="Banner position">
                   <select
                     name="watermark.placement"
@@ -209,58 +275,25 @@ export function ProjectForm({
           </details>
         </Box>
 
-        <Box title="When visitors click">
-          <div className="grid sm:grid-cols-2 gap-4">
-            <Field label="Behavior">
-              <select name="preview.mode" className="field" defaultValue={pv.mode ?? "links"}>
-                <option value="off">Do nothing — watermark only</option>
-                <option value="links">Send link clicks to my page</option>
-                <option value="selected">Only specific buttons</option>
-                <option value="strict">All links &amp; buttons (strict)</option>
-              </select>
-            </Field>
-            <Field label="Send them to" hint="Your portfolio or contact page">
-              <input
-                name="preview.redirectUrl"
-                type="url"
-                className="field"
-                placeholder="https://your-portfolio.com"
-                defaultValue={pv.redirectUrl ?? ""}
-              />
-            </Field>
-          </div>
-          <p className="help -mt-1">Forms and text fields always keep working.</p>
-
-          <details className="more">
-            <summary>More options</summary>
-            <div className="mt-4 space-y-4">
-              <div className="grid sm:grid-cols-2 gap-4">
-                <Field label="Specific buttons (CSS selector)" hint='Used by "Only specific buttons"'>
-                  <input name="preview.selector" className="field font-mono" placeholder=".buy, [data-checkout]" defaultValue={pv.selector ?? ""} />
-                </Field>
-                <Field label="Never block (CSS selector)">
-                  <input name="preview.allowSelector" className="field font-mono" placeholder="[data-lg-allow]" defaultValue={pv.allowSelector ?? ""} />
-                </Field>
-              </div>
-              <Field label="Message when there's no link" hint="Shown as a small notice">
-                <input
-                  name="preview.notice"
-                  className="field"
-                  maxLength={240}
-                  defaultValue={pv.notice ?? ""}
-                  placeholder="This is an unpaid preview. Contact to purchase."
-                />
-              </Field>
+        {simple ? (
+          <details className="card p-5 more">
+            <summary>More options — allowed domains, what happens on click</summary>
+            <div className="mt-5 space-y-5">
+              {domainsField}
+              <div className="box-title pt-1">When visitors click</div>
+              {clickFields}
             </div>
           </details>
-        </Box>
+        ) : (
+          <Box title="When visitors click">{clickFields}</Box>
+        )}
 
         <div className="card p-4 flex items-center justify-between gap-3">
           <span className="text-xs text-[var(--subtle)]">
-            {mode === "create" ? "You can change all of this later." : "Changes apply on the site's next page load."}
+            {simple ? "You can change all of this later." : "Changes apply on the site's next page load."}
           </span>
-          <SubmitButton pendingText={mode === "create" ? "Creating…" : "Saving…"}>
-            {mode === "create" ? "Create project" : "Save changes"}
+          <SubmitButton pendingText={simple ? "Creating…" : "Saving…"}>
+            {simple ? "Create project" : "Save changes"}
           </SubmitButton>
         </div>
       </div>
@@ -299,8 +332,8 @@ export function ProjectForm({
           height={300}
         />
         <p className="text-xs text-[var(--subtle)]">
-          Exactly what visitors see while the project is unpaid. Switch between a light
-          and dark site to check it reads well on both.
+          Exactly what visitors see while the project is unpaid. Switch between a light and
+          dark site to check it reads well on both.
         </p>
       </aside>
     </form>

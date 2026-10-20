@@ -10,13 +10,25 @@ import {
 } from "@/lib/projects";
 import { projectCreateSchema, projectUpdateSchema } from "@/lib/validation";
 import { ActionState, zodFieldErrors } from "@/lib/action-state";
+import { normalizeDomain } from "@/lib/origin";
 
 function parseConfig(formData: FormData) {
+  // Accept "client.com" as well as a full URL; add https:// when it's missing.
+  let websiteUrl = String(formData.get("websiteUrl") ?? "").trim();
+  if (websiteUrl && !/^https?:\/\//i.test(websiteUrl)) websiteUrl = `https://${websiteUrl}`;
+
+  // People paste full URLs ("https://client.com/") here too — reduce each line
+  // to its bare domain. Unparseable lines are kept as-is so validation flags them.
   const domainsRaw = String(formData.get("domains") ?? "");
   const domains = domainsRaw
     .split(/[\n,]/)
     .map((d) => d.trim())
-    .filter(Boolean);
+    .filter(Boolean)
+    .map((d) => normalizeDomain(d) ?? d);
+
+  // No domains given: allow the project's own website automatically.
+  const siteHost = websiteUrl ? normalizeDomain(websiteUrl) : null;
+  if (domains.length === 0 && siteHost) domains.push(siteHost);
 
   const watermark = {
     style: String(formData.get("watermark.style") ?? "diagonal"),
@@ -39,7 +51,7 @@ function parseConfig(formData: FormData) {
 
   return {
     name: String(formData.get("name") ?? "").trim(),
-    websiteUrl: String(formData.get("websiteUrl") ?? "").trim(),
+    websiteUrl,
     environment: String(formData.get("environment") ?? "development"),
     domains,
     watermark,

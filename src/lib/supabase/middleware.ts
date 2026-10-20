@@ -30,8 +30,10 @@ export async function updateSession(request: NextRequest) {
       },
     });
 
-    // Touch the session so expired tokens get refreshed.
-    await supabase.auth.getUser();
+    // Verifies the token (locally, against cached signing keys) and refreshes
+    // it when close to expiry. Much cheaper than getUser(), which always calls
+    // the Auth server.
+    await supabase.auth.getClaims();
   } catch (err) {
     console.error("Supabase session refresh failed:", err);
   }

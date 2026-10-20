@@ -125,7 +125,14 @@ export default async function ProjectDetailPage({
         </div>
       ) : null}
 
-      {tab === "setup" ? <IntegrationPanel publicId={project.publicId} /> : null}
+      {tab === "setup" ? (
+        <IntegrationPanel
+          publicId={project.publicId}
+          projectId={project.id}
+          websiteUrl={project.websiteUrl}
+          domains={project.domains.map((d) => d.domain)}
+        />
+      ) : null}
 
       {tab === "settings" ? (
         <>
