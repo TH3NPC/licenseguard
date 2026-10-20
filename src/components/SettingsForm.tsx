@@ -19,6 +19,7 @@ export function SettingsForm({
 
   return (
     <form action={action} className="card p-5 flex flex-col gap-4">
+      <h2 className="box-title">Defaults for new projects</h2>
       {state.ok && state.message ? (
         <div role="status" className="rounded-[var(--radius)] border border-[var(--color-ok-line)] bg-[var(--color-ok-bg)] px-3 py-2 text-sm text-[var(--color-ok)]">
           {state.message}
@@ -48,8 +49,8 @@ export function SettingsForm({
           <select id="s-wstyle" name="defaultWatermarkStyle" className="field" defaultValue={defaults.defaultWatermarkStyle}>
             <option value="diagonal">Repeated diagonal</option>
             <option value="center">Large centered</option>
-            <option value="layer">Translucent layer</option>
-            <option value="banner">Compact banner</option>
+            <option value="layer">Even layer</option>
+            <option value="banner">Banner bar</option>
           </select>
         </div>
       </div>

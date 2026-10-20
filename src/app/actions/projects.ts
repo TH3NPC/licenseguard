@@ -20,6 +20,7 @@ function parseConfig(formData: FormData) {
 
   const watermark = {
     style: String(formData.get("watermark.style") ?? "diagonal"),
+    theme: String(formData.get("watermark.theme") ?? "auto"),
     text: String(formData.get("watermark.text") ?? ""),
     opacity: Number(formData.get("watermark.opacity") ?? 0.16),
     size: String(formData.get("watermark.size") ?? "md"),
@@ -60,7 +61,7 @@ export async function createProjectAction(
   }
   const project = await createProjectForOwner(user.id, parsed.data);
   revalidatePath("/dashboard");
-  redirect(`/dashboard/projects/${project.id}`);
+  redirect(`/dashboard/projects/${project.id}?tab=setup`);
 }
 
 export async function updateProjectAction(

@@ -14,13 +14,13 @@ export default async function DashboardLayout({
 
   return (
     <div className="min-h-dvh">
-      <header className="sticky top-0 z-40 border-b border-[var(--line)] bg-[color-mix(in_srgb,var(--canvas)_82%,transparent)] backdrop-blur-md">
+      <header className="sticky top-0 z-40 border-b border-[var(--line)] bg-[var(--surface)]">
         <div className="mx-auto max-w-6xl px-4 h-16 flex items-center justify-between">
           <Link href="/dashboard" aria-label="Dashboard">
             <Logo />
           </Link>
-          <div className="flex items-center gap-2">
-            <span className="hidden sm:inline text-sm text-[var(--subtle)] truncate max-w-[180px]">
+          <div className="flex items-center gap-1.5">
+            <span className="hidden md:inline text-xs text-[var(--subtle)] truncate max-w-[200px] mr-2">
               {user.email}
             </span>
             <ThemeToggle />
@@ -33,8 +33,8 @@ export default async function DashboardLayout({
         </div>
       </header>
 
-      <div className="mx-auto max-w-6xl px-4 py-6 sm:grid sm:grid-cols-[180px_1fr] sm:gap-8">
-        <aside className="mb-4 sm:mb-0">
+      <div className="mx-auto max-w-6xl px-4 py-6 grid gap-4 md:grid-cols-[200px_1fr] md:items-start">
+        <aside className="card p-2 md:sticky md:top-[88px]">
           <DashboardNav />
         </aside>
         <main className="min-w-0">{children}</main>

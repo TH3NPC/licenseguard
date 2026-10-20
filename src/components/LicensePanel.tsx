@@ -31,7 +31,7 @@ export function LicensePanel({
   return (
     <div className="card p-5">
       <div className="flex items-center justify-between gap-3">
-        <h2 className="text-sm font-semibold">License</h2>
+        <h2 className="box-title">License</h2>
         <StatusBadge status={effective} />
       </div>
 

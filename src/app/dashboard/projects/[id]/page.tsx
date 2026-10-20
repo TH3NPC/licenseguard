@@ -15,72 +15,147 @@ import { CredentialsPanel } from "@/components/CredentialsPanel";
 
 export const dynamic = "force-dynamic";
 
+const TABS = [
+  { id: "license", label: "License" },
+  { id: "setup", label: "Setup" },
+  { id: "settings", label: "Settings" },
+  { id: "keys", label: "API keys" },
+] as const;
+type TabId = (typeof TABS)[number]["id"];
+
 export default async function ProjectDetailPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ tab?: string }>;
 }) {
   const { id } = await params;
+  const { tab: rawTab } = await searchParams;
+  const tab: TabId = TABS.some((t) => t.id === rawTab) ? (rawTab as TabId) : "license";
+
   const user = await requireUser();
   const project = await getProjectForOwner(user.id, id);
   if (!project) notFound();
 
-  const watermark = parseWatermarkConfig(project.watermarkConfig);
-  const preview = parsePreviewConfig(project.previewConfig);
   const effective = effectiveStatus(project.license, new Date());
-  const update = updateProjectAction.bind(null, project.id);
+  const staleActive =
+    effective === LICENSE_STATUS.EXPIRED && project.license?.status === LICENSE_STATUS.ACTIVE;
 
   return (
-    <div className="max-w-2xl">
-      <div className="mb-5">
-        <Link href="/dashboard/projects" className="text-sm text-[var(--color-muted)] underline-offset-2 hover:underline">
+    <div className="space-y-4">
+      {/* Header */}
+      <div className="card p-5">
+        <Link href="/dashboard/projects" className="text-xs font-semibold text-[var(--muted)] hover:text-[var(--ink)]">
           ← Projects
         </Link>
-        <div className="mt-2 flex items-start justify-between gap-3">
+        <div className="mt-1 flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0">
-            <h1 className="text-xl font-semibold truncate">{project.name}</h1>
-            <div className="mt-1 flex items-center gap-2">
-              <code className="mono text-xs text-[var(--color-muted)]">{project.publicId}</code>
+            <div className="flex items-center gap-3 flex-wrap">
+              <h1 className="text-[1.75rem] truncate">{project.name}</h1>
+              <StatusBadge status={effective} />
+            </div>
+            <div className="mt-1 flex items-center gap-1">
+              <code className="mono text-[var(--muted)]">{project.publicId}</code>
               <CopyButton value={project.publicId} label="Copy id" className="btn btn-ghost btn-sm" />
             </div>
+            {staleActive ? (
+              <p className="mt-1 text-xs text-[var(--warn)]">
+                Marked active but past its expiry — visitors see the watermark again.
+              </p>
+            ) : null}
           </div>
-          <StatusBadge status={effective} />
+          <a
+            href={`/preview/${project.publicId}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="btn btn-secondary"
+          >
+            Open live preview ↗
+          </a>
         </div>
-        {effective === LICENSE_STATUS.EXPIRED && project.license?.status === LICENSE_STATUS.ACTIVE ? (
-          <p className="mt-2 text-xs text-[var(--color-warn)]">
-            Stored as active but past its expiry — serving as expired.
-          </p>
-        ) : null}
       </div>
 
-      <div className="flex flex-col gap-6">
-        <LicensePanel
-          projectId={project.id}
-          effective={effective}
-          storedStatus={project.license?.status ?? "unpaid_preview"}
-          activatedAt={project.license?.activatedAt?.toISOString() ?? null}
-          expiresAt={project.license?.expiresAt?.toISOString() ?? null}
-          note={project.license?.note ?? null}
-        />
+      {/* Tabs */}
+      <nav className="tabs" aria-label="Project sections">
+        {TABS.map((t) => (
+          <Link
+            key={t.id}
+            href={`/dashboard/projects/${project.id}?tab=${t.id}`}
+            aria-current={tab === t.id ? "page" : undefined}
+            className="tab"
+          >
+            {t.label}
+          </Link>
+        ))}
+      </nav>
 
-        <IntegrationPanel publicId={project.publicId} />
+      {tab === "license" ? (
+        <div className="grid gap-4 lg:grid-cols-2 lg:items-start">
+          <LicensePanel
+            projectId={project.id}
+            effective={effective}
+            storedStatus={project.license?.status ?? "unpaid_preview"}
+            activatedAt={project.license?.activatedAt?.toISOString() ?? null}
+            expiresAt={project.license?.expiresAt?.toISOString() ?? null}
+            note={project.license?.note ?? null}
+          />
+          <div className="card">
+            <div className="px-5 pt-5 pb-3 box-title">Activity</div>
+            {project.licenseEvents.length === 0 ? (
+              <p className="px-5 pb-5 text-sm text-[var(--subtle)]">No activity yet.</p>
+            ) : (
+              <ul className="border-t border-[var(--line)] divide-y divide-[var(--line)]">
+                {project.licenseEvents.map((e) => (
+                  <li key={e.id} className="px-5 py-3 flex items-center justify-between gap-3">
+                    <span className="text-sm">
+                      <span className="font-semibold capitalize">{e.type}</span>
+                      {e.fromStatus && e.toStatus ? (
+                        <span className="text-[var(--subtle)]"> · {e.fromStatus.replace("_", " ")} → {e.toStatus.replace("_", " ")}</span>
+                      ) : null}
+                    </span>
+                    <span className="text-xs text-[var(--subtle)] whitespace-nowrap">
+                      {new Date(e.createdAt).toLocaleDateString()}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </div>
+      ) : null}
 
-        <section>
-          <h2 className="text-sm font-semibold mb-3">Configuration</h2>
+      {tab === "setup" ? <IntegrationPanel publicId={project.publicId} /> : null}
+
+      {tab === "settings" ? (
+        <>
           <ProjectForm
             mode="edit"
-            action={update}
+            action={updateProjectAction.bind(null, project.id)}
             defaults={{
               name: project.name,
               websiteUrl: project.websiteUrl ?? "",
               environment: project.environment,
               domains: project.domains.map((d) => d.domain),
-              watermark,
-              preview,
+              watermark: parseWatermarkConfig(project.watermarkConfig),
+              preview: parsePreviewConfig(project.previewConfig),
             }}
           />
-        </section>
+          <div className="card p-5 flex flex-wrap items-center justify-between gap-3 border-[var(--danger-line)]">
+            <div>
+              <div className="box-title text-[var(--danger)]">Archive project</div>
+              <p className="mt-1 text-sm text-[var(--muted)]">
+                Hides it and stops its license checks. History is kept.
+              </p>
+            </div>
+            <form action={archiveProjectAction.bind(null, project.id)}>
+              <button type="submit" className="btn btn-danger">Archive</button>
+            </form>
+          </div>
+        </>
+      ) : null}
 
+      {tab === "keys" ? (
         <CredentialsPanel
           projectId={project.id}
           credentials={project.credentials.map((c) => ({
@@ -91,39 +166,7 @@ export default async function ProjectDetailPage({
             lastUsedAt: c.lastUsedAt?.toISOString() ?? null,
           }))}
         />
-
-        <div className="card p-5">
-          <h2 className="text-sm font-semibold">Recent license events</h2>
-          {project.licenseEvents.length === 0 ? (
-            <p className="mt-2 text-sm text-[var(--color-subtle)]">No events yet.</p>
-          ) : (
-            <ul className="mt-3 space-y-2 text-sm">
-              {project.licenseEvents.map((e) => (
-                <li key={e.id} className="flex items-center justify-between gap-3">
-                  <span className="text-[var(--color-muted)]">
-                    <span className="font-medium text-[var(--color-ink)]">{e.type}</span>
-                    {e.fromStatus && e.toStatus ? ` · ${e.fromStatus} → ${e.toStatus}` : ""}
-                  </span>
-                  <span className="text-xs text-[var(--color-subtle)] whitespace-nowrap">
-                    {new Date(e.createdAt).toLocaleString()}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-
-        <div className="card p-5 border-[var(--color-danger-line)]">
-          <h2 className="text-sm font-semibold text-[var(--color-danger)]">Archive project</h2>
-          <p className="mt-1 text-sm text-[var(--color-muted)]">
-            Hides the project and stops serving its license checks. This does not
-            delete history.
-          </p>
-          <form action={archiveProjectAction.bind(null, project.id)} className="mt-3">
-            <button type="submit" className="btn btn-danger btn-sm">Archive project</button>
-          </form>
-        </div>
-      </div>
+      ) : null}
     </div>
   );
 }

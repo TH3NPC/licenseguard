@@ -15,8 +15,11 @@ import {
 
 export const watermarkConfigSchema = z.object({
   style: z.enum(WATERMARK_STYLES as [string, ...string[]]).default("diagonal"),
+  // auto = detect the site's background; light = for light sites (dark ink);
+  // dark = for dark sites (light ink).
+  theme: z.enum(["auto", "light", "dark"]).default("auto"),
   text: z.string().trim().min(1).max(120).default(DEFAULT_WATERMARK_TEXT),
-  opacity: z.number().min(0.03).max(0.7).default(0.16),
+  opacity: z.number().min(0.03).max(0.7).default(0.2),
   size: z.enum(["sm", "md", "lg"]).default("md"),
   placement: z
     .enum(WATERMARK_PLACEMENTS as [string, ...string[]])

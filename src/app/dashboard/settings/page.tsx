@@ -5,6 +5,15 @@ import { SettingsForm } from "@/components/SettingsForm";
 export const metadata = { title: "Settings" };
 export const dynamic = "force-dynamic";
 
+function Row({ label, value }: { label: string; value: React.ReactNode }) {
+  return (
+    <div className="flex items-center justify-between gap-3 py-2.5 border-t border-[var(--line)] first:border-t-0 text-sm">
+      <span className="text-[var(--subtle)]">{label}</span>
+      <span className="text-right font-medium truncate">{value}</span>
+    </div>
+  );
+}
+
 export default async function SettingsPage() {
   const user = await requireUser();
   const subscription = await prisma.subscription.findFirst({
@@ -13,44 +22,36 @@ export default async function SettingsPage() {
   });
 
   return (
-    <div className="max-w-2xl">
-      <h1 className="text-xl font-semibold mb-5">Settings</h1>
-
-      <div className="card p-5 mb-6">
-        <h2 className="text-sm font-semibold">Account</h2>
-        <dl className="mt-3 grid grid-cols-2 gap-y-2 text-sm">
-          <dt className="text-[var(--color-subtle)]">Email</dt>
-          <dd className="text-right mono">{user.email}</dd>
-          <dt className="text-[var(--color-subtle)]">Member since</dt>
-          <dd className="text-right">{new Date(user.createdAt).toLocaleDateString()}</dd>
-        </dl>
+    <div className="space-y-4">
+      <div className="card p-5">
+        <h1 className="text-[1.75rem]">Settings</h1>
+        <p className="text-sm text-[var(--muted)]">Your account, plan, and defaults for new projects.</p>
       </div>
 
-      <div className="card p-5 mb-6">
-        <h2 className="text-sm font-semibold">Subscription</h2>
-        {subscription ? (
-          <dl className="mt-3 grid grid-cols-2 gap-y-2 text-sm">
-            <dt className="text-[var(--color-subtle)]">Plan</dt>
-            <dd className="text-right capitalize">{subscription.plan}</dd>
-            <dt className="text-[var(--color-subtle)]">Status</dt>
-            <dd className="text-right capitalize">{subscription.status}</dd>
-            <dt className="text-[var(--color-subtle)]">Renews / ends</dt>
-            <dd className="text-right">
-              {subscription.currentPeriodEnd
-                ? new Date(subscription.currentPeriodEnd).toLocaleDateString()
-                : "—"}
-            </dd>
-          </dl>
-        ) : (
-          <p className="mt-2 text-sm text-[var(--color-subtle)]">No subscription on record.</p>
-        )}
-        <p className="mt-3 text-xs text-[var(--color-subtle)]">
-          A developer subscription governs your account access. It is separate
-          from each client project&apos;s commercial license.
-        </p>
+      <div className="grid gap-4 md:grid-cols-2">
+        <section className="card p-5">
+          <h2 className="box-title mb-2">Account</h2>
+          <Row label="Email" value={<span className="mono">{user.email}</span>} />
+          <Row label="Member since" value={new Date(user.createdAt).toLocaleDateString()} />
+        </section>
+
+        <section className="card p-5">
+          <h2 className="box-title mb-2">Plan</h2>
+          {subscription ? (
+            <>
+              <Row label="Plan" value={<span className="capitalize">{subscription.plan}</span>} />
+              <Row label="Status" value={<span className="capitalize">{subscription.status}</span>} />
+              <Row
+                label="Renews"
+                value={subscription.currentPeriodEnd ? new Date(subscription.currentPeriodEnd).toLocaleDateString() : "—"}
+              />
+            </>
+          ) : (
+            <p className="text-sm text-[var(--subtle)]">No plan on record.</p>
+          )}
+        </section>
       </div>
 
-      <h2 className="text-sm font-semibold mb-3">Project defaults</h2>
       <SettingsForm
         defaults={{
           name: user.name ?? "",

@@ -30,7 +30,7 @@ export function CredentialsPanel({
 
   return (
     <div className="card p-5">
-      <h2 className="text-sm font-semibold">Server API credentials</h2>
+      <h2 className="box-title">Server API keys</h2>
       <p className="mt-1 text-sm text-[var(--color-subtle)]">
         Secret keys for <strong>server-to-server</strong> use only. Never place
         one in browser code or a public config. They are stored hashed and shown

@@ -5,31 +5,55 @@ import { effectiveStatus } from "@/lib/licensing";
 import { LICENSE_STATUS } from "@/lib/constants";
 import { usageSummaryForOwner } from "@/lib/usage";
 import { StatusBadge } from "@/components/ui/StatusBadge";
-import { EmptyState } from "@/components/ui/EmptyState";
 
 export const metadata = { title: "Overview" };
 export const dynamic = "force-dynamic";
 
-function StatTile({
+const STEPS = [
+  { n: "01", title: "Create a project", body: "Add the client site and its domain." },
+  { n: "02", title: "Paste the script", body: "Copy it from the project's Setup tab." },
+  { n: "03", title: "Activate when paid", body: "The watermark lifts on the next load." },
+];
+
+function Stat({
   label,
   value,
   hint,
-  accent = "brand",
+  tone,
 }: {
   label: string;
   value: number;
   hint?: string;
-  accent?: "brand" | "ok" | "warn" | "danger";
+  tone: "ink" | "ok" | "warn" | "accent";
 }) {
-  const color = `var(--${accent})`;
+  const color =
+    tone === "ok" ? "var(--ok)" : tone === "warn" ? "var(--warn)" : tone === "accent" ? "var(--accent)" : "var(--ink)";
   return (
-    <div className="card card-hover p-4">
-      <div className="flex items-center justify-between">
-        <span className="text-sm text-[var(--color-muted)]">{label}</span>
-        <span className="h-2.5 w-2.5 rounded-full" style={{ background: color }} />
+    <div className="card p-5">
+      <div className="box-title">{label}</div>
+      <div className="mt-2 font-serif text-[2.3rem] font-bold leading-none tabular-nums" style={{ color }}>
+        {value}
       </div>
-      <div className="mt-2 text-3xl font-bold tabular-nums tracking-tight">{value}</div>
-      {hint ? <div className="mt-0.5 text-xs text-[var(--color-subtle)]">{hint}</div> : null}
+      <div className="mt-2 text-xs text-[var(--subtle)] min-h-[1rem]">{hint ?? ""}</div>
+    </div>
+  );
+}
+
+function QuickStart() {
+  return (
+    <div className="card p-6">
+      <div className="box-title">Getting started</div>
+      <ol className="mt-4 space-y-4">
+        {STEPS.map((s) => (
+          <li key={s.n} className="flex gap-3">
+            <span className="font-serif text-xl font-bold text-[var(--accent)] leading-none pt-0.5">{s.n}</span>
+            <div>
+              <div className="text-sm font-semibold">{s.title}</div>
+              <div className="text-xs text-[var(--muted)]">{s.body}</div>
+            </div>
+          </li>
+        ))}
+      </ol>
     </div>
   );
 }
@@ -45,88 +69,101 @@ export default async function OverviewPage() {
   const now = new Date();
   let active = 0;
   let preview = 0;
-  let endedOrBlocked = 0;
+  let ended = 0;
   for (const p of projects) {
     const s = effectiveStatus(p.license, now);
     if (s === LICENSE_STATUS.ACTIVE) active++;
     else if (s === LICENSE_STATUS.UNPAID_PREVIEW) preview++;
-    else endedOrBlocked++; // expired | revoked | suspended
+    else ended++;
   }
 
   const usage = await usageSummaryForOwner(user.id, 30);
-
   const events = await prisma.licenseEvent.findMany({
     where: { project: { ownerId: user.id } },
     orderBy: { createdAt: "desc" },
-    take: 8,
+    take: 6,
     include: { project: { select: { id: true, name: true } } },
   });
 
   return (
-    <div>
-      <div className="flex items-center justify-between gap-4 mb-5">
-        <h1 className="text-xl font-semibold">Overview</h1>
-        <Link href="/dashboard/projects/new" className="btn btn-primary btn-sm">
+    <div className="space-y-4">
+      <div className="card p-5 flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h1 className="text-[1.75rem]">Overview</h1>
+          <p className="text-sm text-[var(--muted)]">
+            {projects.length === 0
+              ? "Nothing here yet — create your first project."
+              : `${projects.length} project${projects.length === 1 ? "" : "s"} under your account.`}
+          </p>
+        </div>
+        <Link href="/dashboard/projects/new" className="btn btn-primary">
           Create project
         </Link>
       </div>
 
       {projects.length === 0 ? (
-        <EmptyState
-          title="No projects yet"
-          body="Register your first client project to start protecting its preview with a watermark and a managed license."
-          action={
-            <Link href="/dashboard/projects/new" className="btn btn-primary">
-              Create project
-            </Link>
-          }
-        />
+        <div className="grid gap-4 md:grid-cols-2">
+          <div className="card p-6 flex flex-col justify-center">
+            <h2 className="text-2xl">Protect your first preview</h2>
+            <p className="mt-2 text-sm text-[var(--muted)]">
+              Create a project, paste one script into the client&apos;s site, and it
+              shows a watermark until you activate the license.
+            </p>
+            <div className="mt-5">
+              <Link href="/dashboard/projects/new" className="btn btn-primary">
+                Create project
+              </Link>
+            </div>
+          </div>
+          <QuickStart />
+        </div>
       ) : (
         <>
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
-            <StatTile label="Projects" value={projects.length} accent="brand" />
-            <StatTile label="In preview" value={preview} hint="Unpaid / watermarked" accent="warn" />
-            <StatTile label="Active licenses" value={active} accent="ok" />
-            <StatTile label="Expired / blocked" value={endedOrBlocked} accent="danger" />
+          <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
+            <Stat label="Projects" value={projects.length} tone="ink" />
+            <Stat label="Unpaid preview" value={preview} tone="warn" hint="Showing a watermark" />
+            <Stat
+              label="Active"
+              value={active}
+              tone="ok"
+              hint={ended > 0 ? `${ended} expired or revoked` : "Watermark removed"}
+            />
+            <Stat label="License checks" value={usage.total} tone="accent" hint="Last 30 days" />
           </div>
 
-          <div className="card p-4 mb-6">
-            <div className="text-sm text-[var(--color-muted)]">
-              License checks (last 30 days)
+          <div className="grid gap-4 lg:grid-cols-3">
+            <div className="card lg:col-span-2">
+              <div className="px-5 pt-5 pb-3 flex items-center justify-between">
+                <span className="box-title">Recent activity</span>
+                <Link href="/dashboard/projects" className="text-xs font-semibold text-[var(--muted)] hover:text-[var(--ink)]">
+                  All projects →
+                </Link>
+              </div>
+              {events.length === 0 ? (
+                <p className="px-5 pb-5 text-sm text-[var(--subtle)]">No activity yet.</p>
+              ) : (
+                <ul className="border-t border-[var(--line)] divide-y divide-[var(--line)]">
+                  {events.map((e) => (
+                    <li key={e.id} className="px-5 py-3 flex items-center justify-between gap-3">
+                      <div className="min-w-0">
+                        <Link
+                          href={`/dashboard/projects/${e.project.id}`}
+                          className="text-sm font-semibold hover:underline underline-offset-2 truncate block"
+                        >
+                          {e.project.name}
+                        </Link>
+                        <span className="text-xs text-[var(--subtle)]">
+                          {e.type} · {new Date(e.createdAt).toLocaleDateString()}
+                        </span>
+                      </div>
+                      {e.toStatus ? <StatusBadge status={e.toStatus} /> : null}
+                    </li>
+                  ))}
+                </ul>
+              )}
             </div>
-            <div className="mt-1 text-2xl font-semibold tabular-nums">
-              {usage.total}
-            </div>
-            <div className="mt-0.5 text-xs text-[var(--color-subtle)]">
-              Counted server-side from real SDK requests.
-            </div>
+            <QuickStart />
           </div>
-
-          <h2 className="text-sm font-semibold mb-2">Recent license events</h2>
-          {events.length === 0 ? (
-            <p className="text-sm text-[var(--color-subtle)]">No events yet.</p>
-          ) : (
-            <ul className="card divide-y divide-[var(--color-line)]">
-              {events.map((e) => (
-                <li key={e.id} className="flex items-center justify-between gap-3 px-4 py-3">
-                  <div className="min-w-0">
-                    <Link
-                      href={`/dashboard/projects/${e.project.id}`}
-                      className="text-sm font-medium underline-offset-2 hover:underline truncate block"
-                    >
-                      {e.project.name}
-                    </Link>
-                    <span className="text-xs text-[var(--color-subtle)]">
-                      {e.type}
-                      {e.toStatus ? ` → ${e.toStatus}` : ""} ·{" "}
-                      {new Date(e.createdAt).toLocaleString()}
-                    </span>
-                  </div>
-                  {e.toStatus ? <StatusBadge status={e.toStatus} /> : null}
-                </li>
-              ))}
-            </ul>
-          )}
         </>
       )}
     </div>

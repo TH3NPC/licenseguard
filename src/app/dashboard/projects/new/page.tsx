@@ -9,14 +9,15 @@ export default async function NewProjectPage() {
   const user = await requireUser();
 
   return (
-    <div className="max-w-2xl">
-      <div className="mb-5">
-        <Link href="/dashboard/projects" className="text-sm text-[var(--color-muted)] underline-offset-2 hover:underline">
+    <div className="space-y-4">
+      <div className="card p-5">
+        <Link href="/dashboard/projects" className="text-xs font-semibold text-[var(--color-muted)] hover:text-[var(--ink)]">
           ← Projects
         </Link>
-        <h1 className="mt-2 text-xl font-semibold">Create project</h1>
+        <h1 className="mt-1 text-[1.75rem]">Create project</h1>
         <p className="text-sm text-[var(--color-muted)]">
-          A public project id and integration snippet are generated on save.
+          Only a name is required — everything else has sensible defaults. You&apos;ll
+          get the script to paste right after saving.
         </p>
       </div>
 

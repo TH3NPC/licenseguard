@@ -127,12 +127,52 @@
     });
   }
 
+  // ---- Theme: pick ink that contrasts with the host page --------------------
+
+  function parseRgb(s) {
+    var m = /rgba?\(\s*([\d.]+)[,\s]+([\d.]+)[,\s]+([\d.]+)(?:[,\s/]+([\d.]+))?/i.exec(
+      s || ""
+    );
+    if (!m) return null;
+    return { r: +m[1], g: +m[2], b: +m[3], a: m[4] === undefined ? 1 : +m[4] };
+  }
+
+  // True when the visible page background is dark.
+  function pageIsDark() {
+    var els = [document.body, document.documentElement];
+    for (var i = 0; i < els.length; i++) {
+      if (!els[i]) continue;
+      var rgb = parseRgb(getComputedStyle(els[i]).backgroundColor);
+      if (rgb && rgb.a > 0.5) {
+        return (0.2126 * rgb.r + 0.7152 * rgb.g + 0.0722 * rgb.b) / 255 < 0.5;
+      }
+    }
+    // Transparent all the way up: the canvas is white unless the page opts into dark.
+    var scheme = (getComputedStyle(document.documentElement).colorScheme || "").toLowerCase();
+    if (scheme.indexOf("dark") === -1) return false;
+    if (scheme.indexOf("light") === -1) return true;
+    return !!(window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches);
+  }
+
+  // "light" = for light websites (dark ink); "dark" = for dark websites (light ink).
+  function resolveTheme(wm) {
+    if (wm.theme === "light" || wm.theme === "dark") return wm.theme;
+    return pageIsDark() ? "dark" : "light";
+  }
+
+  function inkFor(theme) {
+    return theme === "dark"
+      ? { ink: "255,255,255", halo: "0,0,0", barBg: "rgba(250,248,243,.96)", barText: "#141311" }
+      : { ink: "20,19,17", halo: "255,255,255", barBg: "rgba(20,19,17,.94)", barText: "#ffffff" };
+  }
+
   function buildWatermark(wm, preview) {
     var text = esc(wm.text || "UNPAID PREVIEW");
-    var opacity = typeof wm.opacity === "number" ? wm.opacity : 0.16;
+    var opacity = typeof wm.opacity === "number" ? wm.opacity : 0.2;
     var style = wm.style || "diagonal";
     var sizeMap = { sm: 18, md: 28, lg: 42 };
     var fontSize = sizeMap[wm.size] || sizeMap.md;
+    var c = inkFor(resolveTheme(wm));
 
     var root = document.createElement("div");
     root.id = DOM_ID;
@@ -146,12 +186,10 @@
       "font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,sans-serif",
     ].join(";");
 
-    // White text + mix-blend-mode:difference keeps the watermark visible on any
-    // background (dark or light) — it always renders as a contrasting tone.
     var textCss =
-      "color:rgba(255,255,255," +
-      opacity +
-      ");font-weight:800;letter-spacing:.04em;text-transform:uppercase;white-space:nowrap;";
+      "color:rgba(" + c.ink + "," + opacity + ");" +
+      "text-shadow:0 0 2px rgba(" + c.halo + "," + Math.min(opacity, 0.35) + ");" +
+      "font-weight:800;letter-spacing:.04em;text-transform:uppercase;white-space:nowrap;";
 
     if (style === "banner") {
       var place = wm.placement === "top" ? "top:0" : "bottom:0";
@@ -161,15 +199,15 @@
         "left:0;right:0",
         place,
         "pointer-events:auto",
-        "background:rgba(17,17,17,.92)",
-        "color:#fff",
+        "background:" + c.barBg,
+        "color:" + c.barText,
         "padding:10px 16px",
         "font-size:13px;font-weight:600;letter-spacing:.02em",
         "display:flex;align-items:center;justify-content:center;gap:12px",
-        "box-shadow:0 0 0 1px rgba(255,255,255,.08)",
+        "box-shadow:0 0 0 1px rgba(" + c.halo + ",.1)",
       ].join(";");
       bar.innerHTML = "<span>" + text + "</span>";
-      appendContactLink(bar, wm);
+      appendContactLink(bar, wm, c.barText);
       root.appendChild(bar);
       return root;
     }
@@ -177,7 +215,7 @@
     if (style === "center") {
       var center = document.createElement("div");
       center.style.cssText =
-        "position:absolute;inset:0;display:flex;align-items:center;justify-content:center;mix-blend-mode:difference;";
+        "position:absolute;inset:0;display:flex;align-items:center;justify-content:center;";
       var span = document.createElement("div");
       span.style.cssText =
         textCss + "font-size:" + fontSize * 1.8 + "px;transform:rotate(-18deg);";
@@ -188,18 +226,18 @@
     }
 
     // "layer" and "diagonal" use a tiled SVG pattern.
-    var svg = tiledSvg(wm.text || "UNPAID PREVIEW", fontSize, opacity, style);
+    var svg = tiledSvg(wm.text || "UNPAID PREVIEW", fontSize, opacity, style, c);
     var layer = document.createElement("div");
     layer.style.cssText =
       "position:absolute;inset:0;background-image:url(\"" +
       svg +
-      "\");background-repeat:repeat;mix-blend-mode:difference;" +
-      (style === "layer" ? "background-color:rgba(245,245,244,.04);" : "");
+      "\");background-repeat:repeat;" +
+      (style === "layer" ? "background-color:rgba(" + c.halo + ",.04);" : "");
     root.appendChild(layer);
     return root;
   }
 
-  function tiledSvg(text, fontSize, opacity, style) {
+  function tiledSvg(text, fontSize, opacity, style, c) {
     var tile = style === "layer" ? 360 : 300;
     var rot = style === "layer" ? 0 : -30;
     var svg =
@@ -208,9 +246,15 @@
       '" height="' +
       tile / 2 +
       '">' +
-      '<text x="50%" y="50%" fill="rgba(255,255,255,' +
+      '<text x="50%" y="50%" fill="rgba(' +
+      c.ink +
+      "," +
       opacity +
-      ')" font-family="sans-serif" font-size="' +
+      ')" stroke="rgba(' +
+      c.halo +
+      "," +
+      Math.min(opacity, 0.35) / 2 +
+      ')" stroke-width="1" paint-order="stroke" font-family="sans-serif" font-size="' +
       fontSize +
       '" font-weight="800" letter-spacing="2" text-anchor="middle" dominant-baseline="middle" transform="rotate(' +
       rot +
@@ -224,7 +268,7 @@
     return "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svg);
   }
 
-  function appendContactLink(container, wm) {
+  function appendContactLink(container, wm, color) {
     if (wm.showContactLink === false) return;
     if (!wm.contactUrl) return;
     var a = document.createElement("a");
@@ -234,7 +278,7 @@
     a.textContent = "Contact to purchase";
     a.setAttribute("data-lg-allow", "1");
     a.style.cssText =
-      "color:#fff;text-decoration:underline;font-weight:700;pointer-events:auto;";
+      "color:" + (color || "#fff") + ";text-decoration:underline;font-weight:700;pointer-events:auto;";
     container.appendChild(a);
   }
 

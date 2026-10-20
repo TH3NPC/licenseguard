@@ -9,7 +9,7 @@ export function EmptyState({
 }) {
   return (
     <div className="card p-8 text-center">
-      <h3 className="text-sm font-semibold">{title}</h3>
+      <h3 className="text-2xl">{title}</h3>
       {body ? (
         <p className="mt-1 text-sm text-[var(--color-muted)] max-w-sm mx-auto">
           {body}

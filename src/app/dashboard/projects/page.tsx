@@ -14,10 +14,13 @@ export default async function ProjectsPage() {
   const now = new Date();
 
   return (
-    <div>
-      <div className="flex items-center justify-between gap-4 mb-5">
-        <h1 className="text-xl font-semibold">Projects</h1>
-        <Link href="/dashboard/projects/new" className="btn btn-primary btn-sm">
+    <div className="space-y-4">
+      <div className="card p-5 flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h1 className="text-[1.75rem]">Projects</h1>
+          <p className="text-sm text-[var(--muted)]">Every client site you protect.</p>
+        </div>
+        <Link href="/dashboard/projects/new" className="btn btn-primary">
           Create project
         </Link>
       </div>

@@ -9,8 +9,8 @@ export default async function RegisterPage() {
   if (await getCurrentUser()) redirect("/dashboard");
   return (
     <>
-      <h1 className="text-xl font-semibold mb-1">Create your account</h1>
-      <p className="text-sm text-[var(--color-muted)] mb-6">
+      <h1 className="text-[2rem] mb-1">Create your account</h1>
+      <p className="text-sm text-[var(--color-muted)] mb-7">
         Start protecting your website previews in minutes.
       </p>
       <AuthForm mode="register" action={registerAction} />

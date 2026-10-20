@@ -25,6 +25,16 @@ describe("config parsing", () => {
     expect(wm.opacity).not.toBe(5);
   });
 
+  it("defaults the watermark theme to auto and accepts light/dark", () => {
+    expect(parseWatermarkConfig(null).theme).toBe("auto");
+    expect(parseWatermarkConfig(JSON.stringify({ theme: "dark" })).theme).toBe("dark");
+    expect(parseWatermarkConfig(JSON.stringify({ theme: "light" })).theme).toBe("light");
+  });
+
+  it("falls back to auto for an unknown theme", () => {
+    expect(parseWatermarkConfig(JSON.stringify({ theme: "neon" })).theme).toBe("auto");
+  });
+
   it("defaults preview mode to links", () => {
     expect(parsePreviewConfig(null).mode).toBe("links");
   });
