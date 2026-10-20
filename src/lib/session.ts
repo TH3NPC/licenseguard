@@ -2,6 +2,7 @@ import "server-only";
 import { redirect } from "next/navigation";
 import { prisma } from "./prisma";
 import { createClient } from "./supabase/server";
+import { SUPABASE_NOT_CONFIGURED, supabaseConfigured } from "./supabase/config";
 
 /**
  * Server-side session resolution. Identity comes from Supabase Auth; the app's
@@ -11,6 +12,11 @@ import { createClient } from "./supabase/server";
  */
 
 export async function getCurrentUser() {
+  // Without Supabase settings nobody can be signed in; render pages as logged out.
+  if (!supabaseConfigured) {
+    console.error(SUPABASE_NOT_CONFIGURED);
+    return null;
+  }
   const supabase = await createClient();
   const {
     data: { user },

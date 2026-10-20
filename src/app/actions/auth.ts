@@ -2,6 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { SUPABASE_NOT_CONFIGURED, supabaseConfigured } from "@/lib/supabase/config";
 import { loginSchema, registerSchema } from "@/lib/validation";
 import { ActionState, zodFieldErrors } from "@/lib/action-state";
 
@@ -26,6 +27,8 @@ export async function registerAction(
       fieldErrors: zodFieldErrors(parsed.error.issues),
     };
   }
+
+  if (!supabaseConfigured) return { error: SUPABASE_NOT_CONFIGURED };
 
   const { email, password, name } = parsed.data;
   const supabase = await createClient();
@@ -61,6 +64,8 @@ export async function loginAction(
   if (!parsed.success) {
     return { error: "Please enter your email and password." };
   }
+
+  if (!supabaseConfigured) return { error: SUPABASE_NOT_CONFIGURED };
 
   const supabase = await createClient();
   const { error } = await supabase.auth.signInWithPassword(parsed.data);
