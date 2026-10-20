@@ -11,14 +11,18 @@ let src = readFileSync(path, "utf8");
 
 if (src.includes('provider = "sqlite"')) {
   src = src.replace('provider = "sqlite"', 'provider = "postgresql"');
-  if (!src.includes("directUrl")) {
+  // directUrl is only needed for schema pushes/migrations, so only add it when
+  // DIRECT_URL is actually set — a missing variable must never break the build.
+  if (!src.includes("directUrl") && process.env.DIRECT_URL) {
     src = src.replace(
       'url      = env("DATABASE_URL")',
       'url       = env("DATABASE_URL")\n  directUrl = env("DIRECT_URL")',
     );
   }
   writeFileSync(path, src);
-  console.log("✔ Prisma datasource → postgresql (+ directUrl)");
+  console.log(
+    "✔ Prisma datasource → postgresql" + (src.includes("directUrl") ? " (+ directUrl)" : ""),
+  );
 } else {
   console.log("Prisma datasource provider is not sqlite; leaving as-is.");
 }
