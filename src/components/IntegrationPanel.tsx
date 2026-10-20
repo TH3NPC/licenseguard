@@ -1,9 +1,9 @@
 import Link from "next/link";
 import { CopyButton } from "./ui/CopyButton";
 import { InstallCheck } from "./InstallCheck";
-import { publicEnv } from "@/lib/env";
+import { getAppBaseUrl } from "@/lib/app-url";
 
-export function IntegrationPanel({
+export async function IntegrationPanel({
   publicId,
   projectId,
   websiteUrl,
@@ -14,7 +14,7 @@ export function IntegrationPanel({
   websiteUrl: string | null;
   domains: string[];
 }) {
-  const base = publicEnv.appUrl.replace(/\/$/, "");
+  const base = await getAppBaseUrl();
   const scriptSnippet = `<script\n  src="${base}/sdk/v1/licenseguard.js"\n  data-project-id="${publicId}"\n  data-api="${base}"\n  defer\n></script>`;
   const moduleSnippet = `<script src="${base}/sdk/v1/licenseguard.js" defer></script>\n<script>\n  window.addEventListener('load', function () {\n    LicenseGuard.init({ projectId: '${publicId}', apiBase: '${base}' });\n  });\n</script>`;
   const settingsHref = `/dashboard/projects/${projectId}?tab=settings`;

@@ -1,5 +1,5 @@
 import Script from "next/script";
-import { publicEnv } from "@/lib/env";
+import { getAppBaseUrl } from "@/lib/app-url";
 
 export const metadata = {
   title: "Live preview",
@@ -19,7 +19,7 @@ export default async function PreviewPage({
   params: Promise<{ publicId: string }>;
 }) {
   const { publicId } = await params;
-  const base = publicEnv.appUrl.replace(/\/$/, "");
+  const base = await getAppBaseUrl();
 
   return (
     <div style={{ background: "#fafaf9", color: "#1c1917", minHeight: "100dvh" }}>

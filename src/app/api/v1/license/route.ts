@@ -82,8 +82,10 @@ async function handle(req: NextRequest, projectId: string | null) {
   // built-in hosted live preview (/preview/[publicId]) works out of the box.
   const origin = req.headers.get("origin") ?? req.headers.get("referer");
   const allowed = project.domains.map((d) => d.domain);
-  const appHost = hostFromOrigin(publicEnv.appUrl);
-  if (appHost) allowed.push(appHost);
+  // This deployment's own host (where /preview is served), plus the configured URL.
+  for (const own of [hostFromOrigin(req.nextUrl.origin), hostFromOrigin(publicEnv.appUrl)]) {
+    if (own) allowed.push(own);
+  }
   if (!isOriginAllowed(origin, allowed)) {
     // Do not reveal config to unauthorized origins.
     return apiError(
